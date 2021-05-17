@@ -1,0 +1,20 @@
+{
+  // 其他为默认配置
+  "compilerOptions": {                       
+    "target": "esnext", // esnext 最新的js标准
+    "module": "esnext", // 修改为esnext
+    "strict": false,    
+    "skipLibCheck": true,  
+    "forceConsistentCasingInFileNames": true,        
+    "esModuleInterop": true,  
+    "moduleResolution": "node",
+    // 做一个映射表  依赖于 baseUrl配置
+    "paths":{
+      "@vue/*": [
+        "packages/*/src"
+      ]
+    }, 
+    // 基本目录
+    "baseUrl": "./"
+  }
+}

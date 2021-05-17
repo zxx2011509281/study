@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+function smartRepeat(templateStr) {
+  //指针
+  var index = 0;
+  // 栈1 存数字  栈2 存字符型
+  var stack1 = [];
+  var stack2 = [];
+
+  // 剩余部分
+  var rest = templateStr;
+
+  // 最后一项单独处理 所有不用 <=
+  while (index < templateStr.length - 1) {
+    rest = templateStr.slice(index);
+    //判断剩余部分 是不是以 数字 和 [ 开头
+    if (/^\d+\[/.test(rest)) {
+      // 得到数字 （现在是字符串）
+      var times = rest.match(/^(\d+)\[/)[1];
+
+      // 指针移动 数字的长度 还要加上 左括号的 长度
+      index += times.length + 1;
+      // 栈1 和 栈2 压栈
+      stack1.push(+times);
+      stack2.push('');
+    }
+    // 剩余部分是 字母和 ] 开始
+    else if (/^[a-zA-Z]+\]/.test(rest)) {
+      // 得到字母
+      var words = rest.match(/^([a-zA-Z]+)\]/)[1];
+
+      // 栈2 栈顶  修改 为当前字母
+      stack2[stack2.length - 1] = words;
+
+      // 由于] 要单独处理，所有这里指针只移动 字母的长度即可
+      index += words.length;
+    }
+    // 剩余 部分是 ] 开始
+    else if (/^\]/.test(rest)) {
+      // 栈1 ，栈2 弹栈 并且 处理后 拼接到 栈2 的 新栈顶
+      var times = stack1.pop();
+      var words = stack2.pop();
+      stack2[stack2.length - 1] += words.repeat(times);
+
+      index++;
+    }
+  }
+  // while 循环结束
+  return stack2[0].repeat(stack1[0]);
+}
+console.log(smartRepeat('12[2[aab]2[c]]'));
+// aabaabccaabaabccaabaabccaabaabccaabaabccaabaabccaabaabccaabaabccaabaabccaabaabccaabaabccaabaabcc
+    </script>
+  </body>
+</html>

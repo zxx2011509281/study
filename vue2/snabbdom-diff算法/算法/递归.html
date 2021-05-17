@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      var cache = {};
+      function fib(n) {
+        if (cache.hasOwnProperty(n)) {
+          return cache[n];
+        }
+        var v = n == 0 || n == 1 ? 1 : fib(n - 1) + fib(n - 2);
+        cache[n] = v;
+        return v;
+      }
+      var num = 0;
+      for (let i = 0; i < 9; i++) {
+        num += fib(i);
+      }
+      console.log('num', num); // 88
+    </script>
+  </body>
+</html>

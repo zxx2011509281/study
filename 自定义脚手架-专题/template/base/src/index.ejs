@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%= require('./ejstpls/public-pc.ejs')() %>
+    <title>koolearn</title>
+</head>
+<body>
+    <div class="main" id="app">
+        <!-- example -->   
+        <% if (htmlWebpackPlugin.options.env == 'production'  || htmlWebpackPlugin.options.env == 'neibu'){ %>
+            {pc:block pos="<%= htmlWebpackPlugin.options.chipPath %>/chip/example.html" siteid="50"}{/pc}
+        <%}else{ %>
+            <%= require('./chip/example.ejs')({htmlWebpackPlugin:htmlWebpackPlugin}) %>
+        <% } %>
+        <!-- example -->
+    </div>
+</body>
+<script src="//images.koolearn.com/shark/project/zt/plugin/cmsAdvert/js/cmsExitAdvert.nocache.js"></script>
+<!-- Tingyun听云分析 -->
+<script src="https://images.koolearn.com/shark/project/zt/2019/1114gn-ztcxqy-pc2test/common/tingyun/kb-tingyun.js" defer="defer" async></script>
+
+<!-- GIO统计 -->
+<script type="text/javascript" src="//images.koolearn.com/shark/project/gio/gio.js" defer async></script>
+</html>

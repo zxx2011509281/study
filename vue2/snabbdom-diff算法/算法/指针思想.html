@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      var str =
+        'aaaaaaaaaabbbbaaaaacccddbbbeeessfffffffffffffffffffffffffwwwwwwwwww';
+      // 指针
+      var i = 0;
+      var j = 1;
+
+      // 当前重复最多的次数
+      var maxRepeat = 0;
+      // 重复最多的字符串
+      var maxStr = '';
+
+      // 循环 当i还在范围内
+      while (i <= str.length - 1) {
+        // 两个指针指向的字符 不相同
+        if (str[i] !== str[j]) {
+          // 与前面保存的最大重复次数比较， 更大的话重新赋值
+          if (j - i > maxRepeat) {
+            maxRepeat = j - i;
+            maxStr = str[i];
+          }
+          // i移动到j的位置
+          i = j;
+        }
+        // 如果相同的话 i不同，所以不用写
+
+        // j每次都要后移
+        j++;
+      }
+      console.log(`重复最多的字符是：${maxStr}，重复次数为：${maxRepeat}`);
+      // 重复最多的字符是：f，重复次数为：25
+    </script>
+  </body>
+</html>
