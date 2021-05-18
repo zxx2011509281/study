@@ -14,6 +14,27 @@ vite会拦截这个请求，去做vue相关的编译、解析等，这样就实�
 1. vue3配套的工具， 下一代脚手架工具
 2. 掌握vue3 代码编译的流程(使用层面)
 
+### 使用
+```
+npm init vite-app <project-name>
+
+cd <project-name>
+
+npm install
+
+npm run dev
+
+如果使用yarn，则依次执行下面的命令：
+
+yarn create vite-app <project-name>
+
+cd <project-name>
+
+yarn
+
+yarn dev
+```
+
 ### 原理：
 在html中 script链接上要增加type="module"
 ```

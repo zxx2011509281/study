@@ -141,11 +141,12 @@ const shallowSet = /*#__PURE__*/ createSetter(true)
 
 function createSetter(shallow = false) {
   return function set(
-    target: object,
-    key: string | symbol,
-    value: unknown,
-    receiver: object
+    target: object, // 对象
+    key: string | symbol, // 对象 的key 
+    value: unknown, // 新值
+    receiver: object // 代理对象  Proxy代理的对象
   ): boolean {
+    // 获取老值
     let oldValue = (target as any)[key]
     if (!shallow) {
       value = toRaw(value)
@@ -158,16 +159,24 @@ function createSetter(shallow = false) {
       // in shallow mode, objects are set as-is regardless of reactive or not
     }
 
+    // isArray(target) 是数组  并且 isIntegerKey(key) key是字符串的数字
+    //  ？ 是数组 判断 Number(key) 是不是 在数组里面
+    // : 否则 是对象，判断对象中是否有 key这一项
     const hadKey =
       isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
         : hasOwn(target, key)
+    // 修改
     const result = Reflect.set(target, key, value, receiver)
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {
       if (!hadKey) {
+        // 没有hadKey  触发依赖   
+        // 新增
         trigger(target, TriggerOpTypes.ADD, key, value)
       } else if (hasChanged(value, oldValue)) {
+        // 如果 老值和 新值  有变化   也要触发依赖  
+        // 修改
         trigger(target, TriggerOpTypes.SET, key, value, oldValue)
       }
     }
