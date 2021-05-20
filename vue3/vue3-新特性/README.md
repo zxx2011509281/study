@@ -50,7 +50,7 @@ https://juejin.cn/post/6928175048163491848
 
 #### Fragment
 vue3不会再像vue2一样需要手动添加一个根结点
-如果你创建一个Vue组件，那么它只能有一个根节点。 这意味着不能创建这样的组件：
+vue2中 如果你创建一个Vue组件，那么它只能有一个根节点。 这意味着不能创建这样的组件：
 ```
 <template>
   <div>Hello</div>
@@ -240,6 +240,8 @@ export default {
 
     // 触发事件 (方法)
     console.log(context.emit)
+    // 暴露
+    console.log(context.expose)
   }
 }
 ```
@@ -391,6 +393,90 @@ const stop = watchEffect(() => {
 stop()
 ```
 
+**watchEffect 清除副作用**
+有时副作用函数会执行一些异步的副作用，这些响应需要在其失效时清除 (即完成之前状态已改变了) 。所以侦听副作用传入的函数可以接收一个 onInvalidate 函数作入参，用来注册清理失效时的回调。当以下情况发生时，这个失效回调会被触发：
+
+* 副作用即将重新执行时
+* 侦听器被停止 (如果在 setup() 或生命周期钩子函数中使用了 watchEffect，则在组件卸载时)
+
+
+比如： 假设我们现在用一个用户ID去查询用户的详情信息，然后我们监听了这个用户ID， 当用户ID 改变的时候我们就会去发起一次请求，但是如果在请求数据的过程中，我们的用户ID发生了多次变化，那么我们就会发起多次请求，而最后一次返回的数据将会覆盖掉我们之前返回的所有用户详情。这不仅会导致资源浪费， watchEffect 我们就可以做到
+```
+<template>
+  <div> count:{{count}}</div>
+  <div @click="fn">click</div>
+</template>
+
+<script>
+import { watchEffect, ref } from 'vue'
+export default {
+  setup() {
+    const count = ref(2)
+    watchEffect((onInvalidate) => {
+      console.log(count.value, '副作用1111')
+
+      const token = setTimeout(() => {
+        console.log(count.value, '副作用22222')
+        // 发送请求
+      }, 4000)
+
+      onInvalidate(() => {
+        // 4 秒之内改变  清除副作用
+        // token 是 上一下 watchEffect 中 返回的token
+        clearTimeout(token)
+      })
+    })
+    function fn() {
+      count.value++
+    }
+    return {
+      fn,
+      count,
+    }
+  },
+}
+</script>
+用户 点击4秒内 再次点击 会取消上一次的 请求 ，如果4秒内 没有点击，再发送请求
+
+```
+
+**副作用刷新时机**
+Vue 的响应性系统会缓存副作用函数，并异步地刷新它们，这样可以避免同一个“tick” 中多个状态改变导致的不必要的重复调用。在核心的具体实现中，组件的 update 函数也是一个被侦听的副作用。当一个用户定义的副作用函数进入队列时，默认情况下，会在所有的组件 update 前执行;
+
+flush: post; 在组件 update之后执行
+// 在组件更新后触发，这样你就可以访问更新的 DOM。
+// 注意：这也将推迟副作用的初始运行，直到组件的首次渲染完成。
+
+```
+    const count = ref(0)
+
+    watchEffect(
+      () => {
+        console.log('watchEffect', count.value)
+      },
+      {
+        // flush: 'pre',
+        // flush: 'post',
+        // flush: 'async',
+      }
+    )
+    onBeforeUpdate(() => {
+      console.log('组件更新')
+    })
+
+    setTimeout(() => {
+      count.value++
+    }, 1000)
+    return {
+      count,
+    }
+  },
+
+```
+默认 pre ; watchEffect 比 组件更新 先打印
+post: watchEffect 比 组件更新  后打印
+sync 强制效果始终同步触发， 然而这时低效的，很少需要
+
 **watch**
 `watch` API 完全等同于组件[侦听器](https://vue3js.cn/docs/zh/guide/computed.html#%E4%BE%A6%E5%90%AC%E5%99%A8) property。`watch` 需要侦听特定的数据源，并在回调函数中执行副作用。`默认情况下，它也是惰性的，即只有当被侦听的源发生变化时才执行回调`。
 
@@ -400,11 +486,68 @@ stop()
 *   更具体地说明什么状态应该触发侦听器重新运行；
 *   访问侦听状态变化前后的值
 ```
-// 直接侦听ref
-const count = ref(0)
-watch(count, (count, prevCount) => {
-  /* ... */
-})
+    // 直接侦听ref
+    const count = ref(0)
+    watch(count, (count, prevCount) => {
+      console.log('watch1', count, prevCount)
+    })
+
+    setTimeout(() => {
+      count.value = 22
+    }, 2000)
+
+    // 直接监听 getter
+    const state = reactive({ count: 0 })
+    watch(
+      () => state.count,
+      (count, prevCount) => {
+        console.log('watch2', count, prevCount)
+      }
+    )
+     setTimeout(() => {
+      state.count = 33
+    }, 2000)
+
+    // 监听多个数据源
+    const firstName = ref('')
+    const lastName = ref('')
+
+    watch([firstName, lastName], (newValues, prevValues) => {
+      console.log(newValues, prevValues)
+    })
+
+    firstName.value = 'John' // logs: ["John",""] ["", ""]
+    lastName.value = 'Smith' // logs: ["John", "Smith"] ["John", ""]
+
+    // 监听响应式对象
+    const numbers = reactive([1, 2, 3, 4])
+
+    watch(
+      () => [...numbers],
+      (numbers, prevNumbers) => {
+        console.log(numbers, prevNumbers)
+      }
+    )
+
+    numbers.push(5) // logs: [1,2,3,4,5] [1,2,3,4]
+
+
+    // immediate deep 
+    const state = reactive({ count: 0, obj: {name: 'zs'} })
+    watch(
+      () => state,
+      (count, prevCount) => {
+        console.log('watch2', state.obj.name)
+      },
+      {
+        immediate: true, // 初始 立即执行
+        deep: true //深 监听  没有 deep 不会答应 watch2
+      }
+    )
+    setTimeout(() => {
+      state.obj.name = 'ls'
+    }, 2000)
+
 ```
 **watchEffect与watch 区别**
 * watchEffect 不需要指定监听的属性，他会`自动收集依赖`， 只要我们`回调中引用到了响应式的属性`， 就达到了监听效果，而 watch 只能监听`指定的属性`而做出变更(v3开始可以同时指定多个)。
@@ -473,7 +616,112 @@ export default {
 ```
 
 
+**其他响应式API**
 
+`readonly`
+接受一个对象 (响应式或纯对象) 或 ref 并返回原始对象的只读代理。只读代理是深层的：任何被访问的嵌套 property 也是只读的。
 
+`isProxy`
+检查对象是否是由 reactive 或 readonly 创建的 proxy。
 
+`isReactive`
+检查对象是否是由 reactive 创建的响应式代理。
+如果该代理是 readonly 创建的，但包裹了由 reactive 创建的另一个代理，它也会返回 true。
+
+`isReadonly`
+检查对象是否是由 readonly 创建的只读代理。
+
+`toRaw`
+返回 reactive 或 readonly 代理的原始对象。这是一个“逃生舱”，可用于临时读取数据而无需承担代理访问/跟踪的开销，也可用于写入数据而避免触发更改。不建议保留对原始对象的持久引用。请谨慎使用。
+
+`markRaw`
+标记一个对象，使其永远不会转换为 proxy。返回对象本身。
+
+`shallowReactive`
+创建一个响应式代理，它跟踪其自身 property 的响应性，但不执行嵌套对象的深层响应式转换 (暴露原始值)。
+
+`shallowReadonly`
+创建一个 proxy，使其自身的 property 为只读，但不执行嵌套对象的深度只读转换 (暴露原始值)。
+
+`unref`
+如果参数是一个 ref，则返回内部值，否则返回参数本身。这是 val = isRef(val) ? val.value : val 的语法糖函数。
+
+`isRef`
+检查值是否为一个 ref 对象。
+
+`customRef`
+创建一个自定义的 ref，并对其依赖项跟踪和更新触发进行显式控制。它需要一个工厂函数，该函数接收 track 和 trigger 函数作为参数，并且应该返回一个带有 get 和 set 的对象。
+
+```
+<template>
+  <input v-model="text" />
+  {{text}}
+</template>
+
+<script>
+import {customRef} from 'vue'
+export default {
+  setup() {
+    function useDebouncedRef(value, delay = 500) {
+      let timeout
+      return customRef((track, trigger) => {
+        return {
+          get() {
+            track()
+            return value
+          },
+          set(newValue) {
+            clearTimeout(timeout)
+            timeout = setTimeout(() => {
+              value = newValue
+              trigger()
+            }, delay)
+          },
+        }
+      })
+    }
+    return {
+      text: useDebouncedRef('hello'),
+    }
+  },
+}
+</script>
+
+```
+
+`shallowRef`
+创建一个跟踪自身 .value 变化的 ref，但不会使其值也变成响应式的。
+
+`triggerRef`
+手动执行与 shallowRef 关联的任何副作用。
+```
+<script>
+import { shallowRef, ref, watchEffect, triggerRef } from 'vue'
+export default {
+  setup() {
+    // 会打印 两次
+    // const shallow = ref({
+    //   greet: 'Hello, world',
+    // })
+    // watchEffect(() => {
+    //   console.log(shallow.value.greet)
+    // })
+    // shallow.value.greet = 'Hello, universe'
+
+    // 在triggerRef后才会打印第二次
+    const shallow = shallowRef({
+      greet: 'Hello, world',
+    })
+    watchEffect(() => {
+      console.log(shallow.value.greet)
+    })
+    shallow.value.greet = 'Hello, universe'
+
+    setTimeout(() => {
+      triggerRef(shallow)
+    }, 1500);      
+  },
+}
+</script>
+```
 
