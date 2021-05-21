@@ -4,6 +4,7 @@ import createElement from './createElement'
 import patchVnode from './patchVnode'
 
 // 对比 新老虚拟节点 diff 算法 (更新老虚拟节点)
+// patch 之后 oldVnode.elm 对应的真实DOM会更新，并且 oldVnode.sel 和oldVnode.key会变成 newVnode的sel好可以 以便下次patch
 export default function patch (oldVnode, newVnode) {
   // 判断第一个参数 是DOM 节点还是虚拟节点
   if (oldVnode.sel == '' || oldVnode.sel == undefined) {

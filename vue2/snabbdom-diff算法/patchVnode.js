@@ -5,6 +5,7 @@ import createElement from './createElement'
 import updateChildren from './updateChildren.js'
 
 // patch函数中 同一节点的 算法
+// patchVnode 之后 oldVnode.elm 对应的真实DOM会更新。 oldVnode.elm就是真实DOM
 export default function patchVnode (oldVnode, newVnode) {
   // 判断新旧vnode 是不是 同一个对象  是直接返回
   if (oldVnode === newVnode) { return }

@@ -55,7 +55,8 @@ export default function updateChildren (parentElm, oldCh, newCh) {
       // 新后 与 旧前 （新后指针前移， 旧前指针后移）
       patchVnode(oldStartVnode, newEndVnode)
 
-      // 把旧前（与新后一样）节点移动到旧后后面 （上面调用了patChVnode ，旧前已经合新后一样了）
+      // 把旧前（与新后一样）节点移动到旧后后面 （上面调用了patChVnode ，旧前对应的真实DOM(oldStartVnode.elm)已经更新）
+      // 这里继续操作 把 真实页面上的 oldStartVnode.elm对应的DOM 移动到 oldEnvVnode.elm这个DOM后面
       parentElm.insertBefore(oldStartVnode.elm, oldEndVnode.elm.nextSibling)
 
       oldStartVnode = oldCh[++oldStartIdx]
