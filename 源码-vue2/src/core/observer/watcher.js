@@ -52,8 +52,11 @@ export default class Watcher {
   ) {
     this.vm = vm
     if (isRenderWatcher) {
+      // vm._watcher 是实例上 正在执行的watcher
       vm._watcher = this
     }
+    // 保存 用户 调用 vm.$watch 创建的watcher
+    // 每单创建watcher实例的时候，都会把watcher实例添加到vm._watchers中
     vm._watchers.push(this)
     // options
     if (options) {

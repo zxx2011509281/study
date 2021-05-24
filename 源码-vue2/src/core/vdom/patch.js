@@ -69,19 +69,31 @@ function createKeyToOldIdx (children, beginIdx, endIdx) {
 
 export function createPatchFunction (backend) {
   let i, j
+
+   // cbs 每一项(比如update)保存了 所有 modules 里面 存在对应项的方法(实现update 的方法) 
   const cbs = {}
 
+  // 比如 在 platforms 中web  调用  
+  // nodeOps 里面保存的是 操作真实 dom 的各种方法  源码-vue2/src/platforms/web/runtime/node-ops.js
+  // modules 里面保存 的是 修改 各种 ref directives class style evnents 等 的方法
   const { modules, nodeOps } = backend
 
+  // 循环 ['create', 'activate', 'update', 'remove', 'destroy']
+  // 给 对象 key 为循环项  值为 一个数组
   for (i = 0; i < hooks.length; ++i) {
     cbs[hooks[i]] = []
     for (j = 0; j < modules.length; ++j) {
+      // 如果modules 里面 有 对应的方法 ，存入
+      // 比如 modules 里面 对应的 源码-vue2/src/core/vdom/modules/directives.js  中就有create update destroy 方法 
+      // 比如 create  对应 于 directives   cbs = {create: [ updateDirectives], update: [updateDirectives], destroy: [unbindDirectives]}
       if (isDef(modules[j][hooks[i]])) {
         cbs[hooks[i]].push(modules[j][hooks[i]])
       }
     }
   }
 
+
+  // 创建一个空节点   nodeOps.tagName(elm) 获取真实节点的 tagName
   function emptyNodeAt (elm) {
     return new VNode(nodeOps.tagName(elm).toLowerCase(), {}, [], undefined, elm)
   }
@@ -344,13 +356,18 @@ export function createPatchFunction (backend) {
     }
   }
 
+  // 处理 oldVnode 
   function invokeDestroyHook (vnode) {
     let i, j
     const data = vnode.data
+    // data 存在的话
     if (isDef(data)) {
+      // todo?????
       if (isDef(i = data.hook) && isDef(i = i.destroy)) i(vnode)
+      // 把 所有modules里面 的destroy 方法 都 调用 一遍
       for (i = 0; i < cbs.destroy.length; ++i) cbs.destroy[i](vnode)
     }
+    // 如果有 children  遍历 递归 调用 自己 处理 children
     if (isDef(i = vnode.children)) {
       for (j = 0; j < vnode.children.length; ++j) {
         invokeDestroyHook(vnode.children[j])
@@ -698,14 +715,19 @@ export function createPatchFunction (backend) {
   }
 
   return function patch (oldVnode, vnode, hydrating, removeOnly) {
+    //  新vnode 不存在 patch 就直接把 oldVnode 上的destroy方法执行
+    // destroy 之后就没有oldVnode上的绑定的各种了 ,变为 空了
     if (isUndef(vnode)) {
+      // oldVnode 存在 的情况 调用 invokeDestroyHook
       if (isDef(oldVnode)) invokeDestroyHook(oldVnode)
       return
     }
 
+    // 是否  patch 过
     let isInitialPatch = false
     const insertedVnodeQueue = []
 
+    // 如果 oldVnode 不存在 
     if (isUndef(oldVnode)) {
       // empty mount (likely as component), create new root element
       isInitialPatch = true

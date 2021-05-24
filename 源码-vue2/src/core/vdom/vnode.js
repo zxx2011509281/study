@@ -2,7 +2,7 @@
 
 export default class VNode {
   tag: string | void;
-  data: VNodeData | void;
+  data: VNodeData | void;  // 可能有 attrs:{data-id: '1'} on:{click: f} slot: '内容' staticStyle:{color: 'red'} 等等
   children: ?Array<VNode>;
   text: string | void;
   elm: Node | void;

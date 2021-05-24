@@ -12,10 +12,13 @@ export const createCompiler = createCompilerCreator(function baseCompile (
   template: string,
   options: CompilerOptions
 ): CompiledResult {
+  // 转换为ast
   const ast = parse(template.trim(), options)
+  // 优化 打上 static 和 staticRoot 标记
   if (options.optimize !== false) {
     optimize(ast, options)
   }
+  // 返回 render 函数 可以执行的代码
   const code = generate(ast, options)
   return {
     ast,

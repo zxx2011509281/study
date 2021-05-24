@@ -38,18 +38,19 @@ const enum TargetType {
   COLLECTION = 2
 }
 
+// target 的类型
 function targetTypeMap(rawType: string) {
   switch (rawType) {
     case 'Object':
     case 'Array':
-      return TargetType.COMMON
+      return TargetType.COMMON  // 返回1
     case 'Map':
     case 'Set':
     case 'WeakMap':
     case 'WeakSet':
-      return TargetType.COLLECTION
+      return TargetType.COLLECTION // 返回2
     default:
-      return TargetType.INVALID
+      return TargetType.INVALID // 返回 0
   }
 }
 
@@ -197,10 +198,28 @@ function createReactiveObject(
     return existingProxy
   }
   // only a whitelist of value types can be observed.
+  // 获取 target 的类型  只有白名单中的才会 能白 转换为响应式
   const targetType = getTargetType(target)
+
+  // 如果 targetType===0  直接返回原对象
   if (targetType === TargetType.INVALID) {
     return target
   }
+  // 如果 targetType === 2 
+  /**
+    case 'Map':
+    case 'Set':
+    case 'WeakMap':
+    case 'WeakSet':
+    用 collectionHandlers  函数 作为Proxy 的第二个参数
+   */ 
+  // 否则 就是 targetType === 1
+  /**
+    case 'Object':
+    case 'Array':
+    用 baseHandlers 函数 作为Proxy 的第二个参数
+   * **/ 
+  // proxy 代理为响应式
   const proxy = new Proxy(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers

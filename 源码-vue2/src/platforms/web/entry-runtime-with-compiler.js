@@ -9,6 +9,8 @@ import { query } from './util/index'
 import { compileToFunctions } from './compiler/index'
 import { shouldDecodeNewlines, shouldDecodeNewlinesForHref } from './util/compat'
 
+
+// 根据 id 获取页面DOM 元素的内容
 const idToTemplate = cached(id => {
   const el = query(id)
   return el && el.innerHTML
@@ -22,6 +24,7 @@ Vue.prototype.$mount = function (
   el = el && query(el)
 
   /* istanbul ignore if */
+  // 如果 el 是body 或者html 报错
   if (el === document.body || el === document.documentElement) {
     process.env.NODE_ENV !== 'production' && warn(
       `Do not mount Vue to <html> or <body> - mount to normal elements instead.`
@@ -30,12 +33,16 @@ Vue.prototype.$mount = function (
   }
 
   const options = this.$options
+  // render > template > el
   // resolve template/el and convert to render function
+  // 如果没有 render 判断 template
   if (!options.render) {
     let template = options.template
     if (template) {
+        // 如果template 是 #开头的字符串
       if (typeof template === 'string') {
         if (template.charAt(0) === '#') {
+          // 获取 #id 对应的模板
           template = idToTemplate(template)
           /* istanbul ignore if */
           if (process.env.NODE_ENV !== 'production' && !template) {
@@ -45,15 +52,19 @@ Vue.prototype.$mount = function (
             )
           }
         }
+        // 如果是元素节点
       } else if (template.nodeType) {
+        // template 直接 得到 innerHTML
         template = template.innerHTML
       } else {
+        // 其他情况 的 template 不符合要求
         if (process.env.NODE_ENV !== 'production') {
           warn('invalid template option:' + template, this)
         }
         return this
       }
     } else if (el) {
+      // template 不存在  template 等于 获取 el对应的DOM 元素 
       template = getOuterHTML(el)
     }
     if (template) {
@@ -62,6 +73,7 @@ Vue.prototype.$mount = function (
         mark('compile')
       }
 
+      // 把tempalte 转换为render 函数
       const { render, staticRenderFns } = compileToFunctions(template, {
         outputSourceRange: process.env.NODE_ENV !== 'production',
         shouldDecodeNewlines,
@@ -70,7 +82,7 @@ Vue.prototype.$mount = function (
         comments: options.comments
       }, this)
       options.render = render
-      options.staticRenderFns = staticRenderFns
+      options.staticRenderFns = staticRenderFns  // 保存的是静态render ["_c('span',[_c('b',[_v("1")])])", "_c('strong',[_c('b',[_v("1")])])"]
 
       /* istanbul ignore if */
       if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
@@ -87,9 +99,11 @@ Vue.prototype.$mount = function (
  * of SVG elements in IE as well.
  */
 function getOuterHTML (el: Element): string {
+  // 如果有outerHTML配置直接返回
   if (el.outerHTML) {
     return el.outerHTML
   } else {
+    // 否则 创建一个div, 克隆 el 添加到div中，并返回 div的内容
     const container = document.createElement('div')
     container.appendChild(el.cloneNode(true))
     return container.innerHTML

@@ -87,51 +87,65 @@ export function lifecycleMixin (Vue: Class<Component>) {
     // updated in a parent's updated hook.
   }
 
+  // 手动更新实例
   Vue.prototype.$forceUpdate = function () {
     const vm: Component = this
+    // 如果实例有 watcher 则 手动 触发 watcher的update方法 重新渲染
     if (vm._watcher) {
       vm._watcher.update()
     }
   }
 
+  // 销毁实例
   Vue.prototype.$destroy = function () {
     const vm: Component = this
+    // 防止 被重复调用  如果_isBeingDestroyed为true,则正在销毁中或者已经被销毁了
     if (vm._isBeingDestroyed) {
       return
     }
+    // 触发 beforeDestroy 的钩子函数
     callHook(vm, 'beforeDestroy')
+    // 设置_isBeingDestroyed 为ture 标识正在销毁中
     vm._isBeingDestroyed = true
-    // remove self from parent
+    // 移除当前组件与 父组件的连接 （父组件中删除 自己）
     const parent = vm.$parent
+    // 父组件存在 && 父组件没有被销毁 && 不是抽象组件
     if (parent && !parent._isBeingDestroyed && !vm.$options.abstract) {
       remove(parent.$children, vm)
     }
-    // teardown watchers
+
+     // vm._watcher 是vue实例上的，监听组件中的所有状态（状态的依赖列表）
+    // 从所有依赖项的Dep 列表中 将自己移除 （从其他dep中移除当前实例的watcher）
+    // 移除之后，当状态发生变化时，watcher实例就不会再得到通知了   
     if (vm._watcher) {
       vm._watcher.teardown()
     }
+    // vm._watchers 是用户调用vm.$watche创建的 的依赖列表
     let i = vm._watchers.length
     while (i--) {
+      // 也跳跃watcher实例的teardown 移除自身
       vm._watchers[i].teardown()
     }
-    // remove reference from data ob
-    // frozen object may not have observer.
+    // ？？？todo
+    // 从数据对象中删除引用
+    // 冻结对象可能没有观察者。
     if (vm._data.__ob__) {
       vm._data.__ob__.vmCount--
     }
-    // call the last hook...
+    // 添加_isDestroyed 属性，标识vue实例已经被销毁
     vm._isDestroyed = true
     // invoke destroy hooks on current rendered tree
+    // 不会将已经渲染到页面的DOM节点移除，但是会把模板中的所有指令解绑
     vm.__patch__(vm._vnode, null)
-    // fire destroyed hook
+    // 触发destroyed钩子
     callHook(vm, 'destroyed')
-    // turn off all instance listeners.
+    // 移除所有的事件监听器
     vm.$off()
     // remove __vue__ reference
     if (vm.$el) {
       vm.$el.__vue__ = null
     }
-    // release circular reference (#6759)
+    // todo??? 发布循环引用
     if (vm.$vnode) {
       vm.$vnode.parent = null
     }
@@ -144,10 +158,14 @@ export function mountComponent (
   hydrating?: boolean
 ): Component {
   vm.$el = el
+  // 不存在 render 
   if (!vm.$options.render) {
+    // render 被赋值 空的 虚拟节点
     vm.$options.render = createEmptyVNode
+    // 如果是 非 生成环境 会警告用户 
     if (process.env.NODE_ENV !== 'production') {
       /* istanbul ignore if */
+      // runtime-only 运行时版本 不带编译器 ，必须用render
       if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') ||
         vm.$options.el || el) {
         warn(
@@ -164,6 +182,7 @@ export function mountComponent (
       }
     }
   }
+  // 执行 beforeMount 生命周期
   callHook(vm, 'beforeMount')
 
   let updateComponent
@@ -186,6 +205,7 @@ export function mountComponent (
       measure(`vue ${name} patch`, startTag, endTag)
     }
   } else {
+    // 生成环境 
     updateComponent = () => {
       vm._update(vm._render(), hydrating)
     }
@@ -204,7 +224,9 @@ export function mountComponent (
   hydrating = false
 
   // manually mounted instance, call mounted on self
+  // 手动挂载实例，调用自行挂载
   // mounted is called for render-created child components in its inserted hook
+  // 在插入的钩子中为渲染创建的子组件调用mounted
   if (vm.$vnode == null) {
     vm._isMounted = true
     callHook(vm, 'mounted')
@@ -334,18 +356,24 @@ export function deactivateChildComponent (vm: Component, direct?: boolean) {
   }
 }
 
+// callHook(vm, 'beforeUpdate')
 export function callHook (vm: Component, hook: string) {
   // #7573 disable dep collection when invoking lifecycle hooks
+  // 获取全局当前 唯一的watcher
   pushTarget()
+  // 尝试获取 对应 hook的函数 列表
   const handlers = vm.$options[hook]
   const info = `${hook} hook`
   if (handlers) {
     for (let i = 0, j = handlers.length; i < j; i++) {
+      // 遍历执行 
       invokeWithErrorHandling(handlers[i], vm, null, vm, info)
     }
   }
   if (vm._hasHookEvent) {
     vm.$emit('hook:' + hook)
   }
+  // 删除targetStack从删除最后一个 targetStack.pop()
+  // Dep.target = targetStack[targetStack.length - 1]
   popTarget()
 }

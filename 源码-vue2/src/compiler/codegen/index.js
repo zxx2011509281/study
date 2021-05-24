@@ -40,48 +40,65 @@ export type CodegenResult = {
   staticRenderFns: Array<string>
 };
 
+// render 函数生成方法
 export function generate (
   ast: ASTElement | void,
   options: CompilerOptions
 ): CodegenResult {
   const state = new CodegenState(options)
-  // fix #11483, Root level <script> tags should not be rendered.
+  // // 通过genElement方法去生成一个代码字符串
+  // 存在ast就获取genElement，如果为空就创建一个div
   const code = ast ? (ast.tag === 'script' ? 'null' : genElement(ast, state)) : '_c("div")'
   return {
-    render: `with(this){return ${code}}`,
-    staticRenderFns: state.staticRenderFns
+    render: `with(this){return ${code}}`, // with会不安全，可以帮我们解决作用域的问题
+    staticRenderFns: state.staticRenderFns   // 保存的是静态 的render
+    // 静态render 需要配合 render 使用   比如 render _c('div', [_m(0), _v(_s(a)), _m(1)])
+    // 其中 m(0) 和 m(1) 对应 staticRenderFns 里面的 第0个和第1个 静态render
+    // [ "_c('span',[_c('b',[_v("1")])])",  "_c('strong',[_c('b',[_v("1")])])"]
   }
 }
 
+// 生成代码字符串
 export function genElement (el: ASTElement, state: CodegenState): string {
+  // 如果el 存在父节点 那么 pre(v-pre) 尝试获取自己活父节点的 pre 标记 （跳过编译）
   if (el.parent) {
     el.pre = el.pre || el.parent.pre
   }
 
+  // 如果有 静态根节点 标记
   if (el.staticRoot && !el.staticProcessed) {
     return genStatic(el, state)
   } else if (el.once && !el.onceProcessed) {
+    // v-once onceProcessed标记是否被处理过
     return genOnce(el, state)
   } else if (el.for && !el.forProcessed) {
     return genFor(el, state)
   } else if (el.if && !el.ifProcessed) {
     return genIf(el, state)
   } else if (el.tag === 'template' && !el.slotTarget && !state.pre) {
+    // 如果 el 是tempalte 
     return genChildren(el, state) || 'void 0'
   } else if (el.tag === 'slot') {
     return genSlot(el, state)
   } else {
     // component or element
     let code
+    // 如果是 component
     if (el.component) {
       code = genComponent(el.component, el, state)
     } else {
+
       let data
+      // el.plain 为true  表示 没有节点属性
+      // 有节点属性  或者  v-pre并且 有 component
       if (!el.plain || (el.pre && state.maybeComponent(el))) {
+        // 获取data
         data = genData(el, state)
       }
 
+      // 获取childern
       const children = el.inlineTemplate ? null : genChildren(el, state, true)
+      // code  = '_c(name, data, children)'
       code = `_c('${el.tag}'${
         data ? `,${data}` : '' // data
       }${
@@ -89,6 +106,7 @@ export function genElement (el: ASTElement, state: CodegenState): string {
       })`
     }
     // module transforms
+    // ???? todo
     for (let i = 0; i < state.transforms.length; i++) {
       code = state.transforms[i](el, code)
     }
@@ -97,17 +115,21 @@ export function genElement (el: ASTElement, state: CodegenState): string {
 }
 
 // hoist static sub-trees out
+// 获取 静态 节点 _m()
 function genStatic (el: ASTElement, state: CodegenState): string {
   el.staticProcessed = true
   // Some elements (templates) need to behave differently inside of a v-pre
   // node.  All pre nodes are static roots, so we can use this as a location to
   // wrap a state change and reset it upon exiting the pre node.
   const originalPreState = state.pre
+  // v-pre 跳过编译 
   if (el.pre) {
     state.pre = el.pre
   }
+  // 给静态rener函数列表  推入 
   state.staticRenderFns.push(`with(this){return ${genElement(el, state)}}`)
   state.pre = originalPreState
+  // 静态
   return `_m(${
     state.staticRenderFns.length - 1
   }${
@@ -117,12 +139,15 @@ function genStatic (el: ASTElement, state: CodegenState): string {
 
 // v-once
 function genOnce (el: ASTElement, state: CodegenState): string {
+  // 设置 onceProcessed 为true 意味着被 处理过了
   el.onceProcessed = true
   if (el.if && !el.ifProcessed) {
+    // 如果有 if
     return genIf(el, state)
   } else if (el.staticInFor) {
     let key = ''
     let parent = el.parent
+    // 循环找到 parent 直到 获取 到 key
     while (parent) {
       if (parent.for) {
         key = parent.key
@@ -139,6 +164,7 @@ function genOnce (el: ASTElement, state: CodegenState): string {
     }
     return `_o(${genElement(el, state)},${state.onceId++},${key})`
   } else {
+    // 处理过 ，那么 返回 静态 节点代码
     return genStatic(el, state)
   }
 }
@@ -153,16 +179,19 @@ export function genIf (
   return genIfConditions(el.ifConditions.slice(), state, altGen, altEmpty)
 }
 
+// 
 function genIfConditions (
   conditions: ASTIfConditions,
   state: CodegenState,
   altGen?: Function,
-  altEmpty?: string
+  altEmpty?: string // 传入的 默认 
 ): string {
+  // conditions不存在 直接返回 _e() 注释节点别名
   if (!conditions.length) {
     return altEmpty || '_e()'
   }
 
+  // 取出第一项
   const condition = conditions.shift()
   if (condition.exp) {
     return `(${condition.exp})?${
@@ -175,6 +204,7 @@ function genIfConditions (
   }
 
   // v-if with v-once should generate code like (a)?_m(0):_m(1)
+  // v-if 和 v-noce 生成 代码 比如 a? _m(0): _m(1)
   function genTernaryExp (el) {
     return altGen
       ? altGen(el, state)
@@ -211,12 +241,14 @@ export function genFor (
   }
 
   el.forProcessed = true // avoid recursion
+  // _l(el.for,  function(){})
   return `${altHelper || '_l'}((${exp}),` +
     `function(${alias}${iterator1}${iterator2}){` +
       `return ${(altGen || genElement)(el, state)}` +
     '})'
 }
 
+// （生成data）
 export function genData (el: ASTElement, state: CodegenState): string {
   let data = '{'
 
@@ -461,6 +493,7 @@ function genScopedSlot (
   return `{key:${el.slotTarget || `"default"`},fn:${fn}${reverseProxy}}`
 }
 
+// 循环子节点列表，根据不同 的子节点类型 生成不同的 节点字符串 将其 拼接到一起
 export function genChildren (
   el: ASTElement,
   state: CodegenState,
@@ -472,6 +505,7 @@ export function genChildren (
   if (children.length) {
     const el: any = children[0]
     // optimize single v-for
+    // 优化 v-for 只有一个的情况
     if (children.length === 1 &&
       el.for &&
       el.tag !== 'template' &&
@@ -523,6 +557,7 @@ function needsNormalization (el: ASTElement): boolean {
   return el.for !== undefined || el.tag === 'template' || el.tag === 'slot'
 }
 
+// 根据 type 不同 生成不同的 节点字符串
 function genNode (node: ASTNode, state: CodegenState): string {
   if (node.type === 1) {
     return genElement(node, state)
@@ -570,6 +605,7 @@ function genSlot (el: ASTElement, state: CodegenState): string {
 }
 
 // componentName is el.component, take it as argument to shun flow's pessimistic refinement
+// component 返回 _c(name, data, children)
 function genComponent (
   componentName: string,
   el: ASTElement,
