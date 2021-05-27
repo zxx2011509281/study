@@ -36,6 +36,7 @@ const sharedPropertyDefinition = {
   set: noop
 }
 
+// 代理  
 export function proxy (target: Object, sourceKey: string, key: string) {
   sharedPropertyDefinition.get = function proxyGetter () {
     return this[sourceKey][key]
@@ -185,6 +186,17 @@ function initComputed (vm: Component, computed: Object) {
 
     if (!isSSR) {
       // create internal watcher for the computed property.
+      // 比如： fullName : function(){return this.firstname + this.lastname}
+      //  由于 computed 的wathcer lazy,所有开始并不会 执行 get.
+      //  new Watcher(vm, updateComponent, noop, 。。。) 这个 组件更新的watcher ,会 对模板仅仅访问，获取到当前
+      // computed的 值，才出发 sharedPropertyDefinition.get 函数.
+      // watcher.evaluate() 会 执行 computed的函数 比如上面的 return this.firstname + this.lastname
+      // 这样 fullname这个watcher 就会 保存 firstanme 和 lastname 的 dep 
+      // 记录完之后 继续， 这个时候 的Dep.target 时 updateCOmponent对于的 Watcher.
+      // computed 的 watcher.depend()。 会把 computed里面的 所有dep （firstname, lastname的dep），分别收集
+      // updateCOmponent对于的 Watcher。 这样 ，当 firstname或者 lastname变化时， 它们的dep 执行 dep.notify
+      // 通知 每个 watcher 执行 update 方法 。  而 computed第 三个参数 是noop。所有没有回调执行。
+      // 而 updateCOmponent 的watcher update 会让页面 重新 render
       watchers[key] = new Watcher(
         vm,
         getter || noop,
@@ -242,6 +254,14 @@ export function defineComputed (
 }
 
 function createComputedGetter (key) {
+  // 返回的getter 在 initComputed的时候不会执行 （lazy 为 true  constructor时 不会执行 this.get）
+  // 等到 lifecycle 中 beforeMount 生命周期 之后  
+  // 对 new Watcher(vm, updateComponent, noop, ...)  //  (updateComponent 先调用渲染函数 获取一份最新的Vnode节点树， 然后通过 _update方法 对最新的 Vnode和 旧Vnode进行对比，更新DOM节点。)
+  // new Watcher 会 由于, 没有lazy 会执行 this.get() ，此时的Dep.target 为 updateComponent的watcher（组件的watcher），而 updateComponent 会 对 所有节点进行对比 ，所有 会触发 computed 这里的 getter
+  // 这里 watcher.dirty（constructor 的时候 this.dirty = this.lazy）, evaluate 此时 执行 this.get 
+  // 把 computed 对应的 watcher 保存 到 Dep.target中 , 执行 computed的函数 或 get 获取 返回值，popTarget之后 Dep.target 继续变为 updateComponent的Watcher（组件的watcher）
+  // 执行 到 Dep.target 时  其实 就是 updateComponent的Watcher（组件的watcher），watcher.depend 把 computed 的 watcher中 用到 的dep依赖列表循环（所有的computed的 dep 依赖列表）， 都 添加 当前 updateComponent的Watcher （组件的watcher）
+  // 这样 当 computed 的 getter 中 有变化，会 触发 updateComponent的Watcher （组件的watcher）的更新，即页面 更新
   return function computedGetter () {
     const watcher = this._computedWatchers && this._computedWatchers[key]
     if (watcher) {

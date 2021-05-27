@@ -52,6 +52,11 @@ export function initGlobalAPI (Vue: GlobalAPI) {
   }
 
   Vue.options = Object.create(null)
+  {/* 
+  'component',
+  'directive',
+  'filter' 
+  */}
   ASSET_TYPES.forEach(type => {
     Vue.options[type + 's'] = Object.create(null)
   })

@@ -35,6 +35,8 @@ export function initMixin (Vue: Class<Component>) {
       // internal component options needs special treatment.
       initInternalComponent(vm, options)
     } else {
+      // 把用户 传递的 options选项 和 当前钩子函数 的options 属性 及其 父实例构造函数的options属性 合成 新的 options
+      // resolveConstructorOptions 作用是获取当前实例中 构造函数的options和 其所有父级构造函数的options
       vm.$options = mergeOptions(
         resolveConstructorOptions(vm.constructor),
         options || {},
@@ -48,6 +50,10 @@ export function initMixin (Vue: Class<Component>) {
       vm._renderProxy = vm
     }
     // expose real self
+    // 首先初始化 事件与属性 
+    // 然后触发 生命周期钩子 beforeCreate
+    // 随后初始化 provide/inject 和 状态（props, methods, data, computed, watch）
+    // 触发生命周期 created
     vm._self = vm
     initLifecycle(vm)
     initEvents(vm)
@@ -65,6 +71,8 @@ export function initMixin (Vue: Class<Component>) {
       measure(`vue ${vm._name} init`, startTag, endTag)
     }
 
+    // 如果用户 传入el 选项， 则自动开启模板编译阶段和挂载阶段
+    // 否则 不进入下一个生命周期 需要用户 执行 vm.$mount方法，手动开启编译和挂载阶段
     if (vm.$options.el) {
       vm.$mount(vm.$options.el)
     }

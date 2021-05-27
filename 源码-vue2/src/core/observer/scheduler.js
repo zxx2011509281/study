@@ -87,6 +87,8 @@ function flushSchedulerQueue () {
   // as we run existing watchers
   for (index = 0; index < queue.length; index++) {
     watcher = queue[index]
+
+    //lifecylcle.js 中 有设置 new Watcher(vm, updateComponent, noop, before...)
     if (watcher.before) {
       watcher.before()
     }

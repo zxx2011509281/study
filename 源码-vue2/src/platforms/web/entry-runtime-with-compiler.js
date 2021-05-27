@@ -16,6 +16,7 @@ const idToTemplate = cached(id => {
   return el && el.innerHTML
 })
 
+// 函数劫持 
 const mount = Vue.prototype.$mount
 Vue.prototype.$mount = function (
   el?: string | Element,
@@ -57,10 +58,11 @@ Vue.prototype.$mount = function (
         // template 直接 得到 innerHTML
         template = template.innerHTML
       } else {
-        // 其他情况 的 template 不符合要求
+        // 非生产环境 会警告用户
         if (process.env.NODE_ENV !== 'production') {
           warn('invalid template option:' + template, this)
         }
+        // 直接返回（用户自己设置的模板）
         return this
       }
     } else if (el) {

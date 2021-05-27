@@ -206,6 +206,9 @@ export function mountComponent (
     }
   } else {
     // 生成环境 
+    // _update作用是： 调用虚拟DOM中的patch方法 来执行节点的对比与渲染操作
+    // _render作用是：执行渲染函数，得到一份最新的Vnode节点树
+    // vm._update(vm._render())的作用 是 先调用渲染函数 获取一份最新的Vnode节点树， 然后通过 _update方法 对最新的 Vnode和 旧Vnode进行对比，更新DOM节点。
     updateComponent = () => {
       vm._update(vm._render(), hydrating)
     }
@@ -214,6 +217,9 @@ export function mountComponent (
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
+  // 函数中所有读取的数据都 将被watcher 观察， 这些数据中间任何一个发生变化，watcher都将得到 通知。 触发更新。
+  // Watcher 的第二个参数支持 函数， 如果是函数，那么就会观察函数中所有 读取vue实例 上的 响应式数据。
+  // 当 数据变化时(vm._render（）中的响应式数据)， 触发 dep.notify 然后 让 当前 watcher.update -》 this.run-->重新 执行 updateComponent 函数 ，更新 patch 页面
   new Watcher(vm, updateComponent, noop, {
     before () {
       if (vm._isMounted && !vm._isDestroyed) {
