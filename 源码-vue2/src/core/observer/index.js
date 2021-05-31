@@ -22,6 +22,7 @@ const arrayKeys = Object.getOwnPropertyNames(arrayMethods)
  * In some cases we may want to disable observation inside a component's
  * update computation.
  */
+// 是否可以转换为响应式
 export let shouldObserve: boolean = true
 
 export function toggleObserving (value: boolean) {
@@ -107,6 +108,11 @@ function copyAugment (target: Object, src: Object, keys: Array<string>) {
  * returns the new observer if successfully observed,
  * or the existing observer if the value already has one.
  */
+//  *尝试为值创建观察者实例，
+
+//  *如果观察成功，则返回新的观察者，
+ 
+//  *或者现有的观察器（如果值已经有一个观察器）。
 export function observe (value: any, asRootData: ?boolean): Observer | void {
   if (!isObject(value) || value instanceof VNode) {
     return
@@ -115,11 +121,11 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
   if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
     ob = value.__ob__
   } else if (
-    shouldObserve &&
-    !isServerRendering() &&
-    (Array.isArray(value) || isPlainObject(value)) &&
-    Object.isExtensible(value) &&
-    !value._isVue
+    shouldObserve && // 可以被观察 
+    !isServerRendering() && // 不是 ssr 
+    (Array.isArray(value) || isPlainObject(value)) && //数组或对象
+    Object.isExtensible(value) &&  //判断一个对象是否是可扩展的
+    !value._isVue // 没有 _isVue属性
   ) {
     ob = new Observer(value)
   }

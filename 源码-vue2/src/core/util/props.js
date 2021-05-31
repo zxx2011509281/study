@@ -19,22 +19,27 @@ type PropOptions = {
 };
 
 export function validateProp (
-  key: string,
-  propOptions: Object,
-  propsData: Object,
-  vm?: Component
+  key: string, // 属性名
+  propOptions: Object, // 子组件中用户设置的props 选项
+  propsData: Object, // 父组件或用户提供 的props 数据
+  vm?: Component // this别名 实例
 ): any {
-  const prop = propOptions[key]
-  const absent = !hasOwn(propsData, key)
-  let value = propsData[key]
+  const prop = propOptions[key] // 保存当前的prop
+  const absent = !hasOwn(propsData, key) // 当前的props属性 缺席 ，不存在
+  let value = propsData[key] //获取 prop具体的值
   // boolean casting
+  // 处理布尔类型
   const booleanIndex = getTypeIndex(Boolean, prop.type)
   if (booleanIndex > -1) {
+    // 如果 prop不存在 并没有默认值 ，那么为 false
     if (absent && !hasOwn(prop, 'default')) {
       value = false
     } else if (value === '' || value === hyphenate(key)) {
+      // hyphenate aB驼峰转换回去a-b （normalizeProps初始化时会把key转为驼峰）
+      // key 存在 ，当 value为空字符 或 value与key相等 （a==a, userName=user-name）
       // only cast empty string / same name to boolean if
       // boolean has higher priority
+      // 布尔值具有更高的优先级的情况下， 仅将空字符串/相同名称强制转换为布尔值
       const stringIndex = getTypeIndex(String, prop.type)
       if (stringIndex < 0 || booleanIndex < stringIndex) {
         value = true
@@ -42,13 +47,18 @@ export function validateProp (
     }
   }
   // check default value
+  // props 的值 为undefined的情况下
   if (value === undefined) {
+    // 获取默认值
     value = getPropDefaultValue(vm, prop, key)
     // since the default value is a fresh copy,
     // make sure to observe it.
     const prevShouldObserve = shouldObserve
+    // 设置为 可以响应式
     toggleObserving(true)
+    // 把 value默认值 转换为 响应式
     observe(value)
+    // 重置 是否可以响应式的 状态
     toggleObserving(prevShouldObserve)
   }
   if (

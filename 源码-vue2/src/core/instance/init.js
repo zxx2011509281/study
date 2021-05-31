@@ -55,13 +55,13 @@ export function initMixin (Vue: Class<Component>) {
     // 随后初始化 provide/inject 和 状态（props, methods, data, computed, watch）
     // 触发生命周期 created
     vm._self = vm
-    initLifecycle(vm)
-    initEvents(vm)
-    initRender(vm)
+    initLifecycle(vm) // 初始化实例属性 比如：$parent，$root,$children,$refs,_watcher,_isMounted 等
+    initEvents(vm) // 初始化事件 父组件传入的 v-on事件
+    initRender(vm) //将createElement fn绑定到此实例，  defineReactive 把 $attrs $listeners转换为 响应式
     callHook(vm, 'beforeCreate')
-    initInjections(vm) // resolve injections before data/props
-    initState(vm)
-    initProvide(vm) // resolve provide after data/props
+    initInjections(vm) //初始化inject （在data之前，这就是为什么data中可以获取inject的原因）
+    initState(vm) // 初始化状态 按顺序实例化 props,methods,data, computed, watch
+    initProvide(vm) // resolve provide after data/props 初始化 provide
     callHook(vm, 'created')
 
     /* istanbul ignore if */

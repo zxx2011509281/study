@@ -50,6 +50,7 @@ export function proxy (target: Object, sourceKey: string, key: string) {
 export function initState (vm: Component) {
   vm._watchers = []
   const opts = vm.$options
+  // 按顺序初始化状态 props, methods, data, computed, watch
   if (opts.props) initProps(vm, opts.props)
   if (opts.methods) initMethods(vm, opts.methods)
   if (opts.data) {
@@ -64,16 +65,24 @@ export function initState (vm: Component) {
 }
 
 function initProps (vm: Component, propsOptions: Object) {
+  // vm.$options.propsData 是用户通过父组件传入或用户 new Vue 时 传入的 props
   const propsData = vm.$options.propsData || {}
+  // _props 中 会保存 所有设置到 props变量中的属性
   const props = vm._props = {}
   // cache prop keys so that future props updates can iterate using Array
   // instead of dynamic object key enumeration.
+  // 缓存道具键，以便将来更新可以使用数组进行迭代
+  // 缓存props对象中 的key 
   const keys = vm.$options._propKeys = []
+  // 当前实例 是不是 根实例
   const isRoot = !vm.$parent
   // root instance props should be converted
   if (!isRoot) {
+    // 只有root实例的props属性应该被转换为响应式  不能被 observe观察 即不能 new Observe
     toggleObserving(false)
   }
+  // 循环propsOptions ，将key添加到keys中。 调用validateProp 函数得到 prop的值，通过
+  // defineReactive 添加到 vm._props中 变为响应式
   for (const key in propsOptions) {
     keys.push(key)
     const value = validateProp(key, propsOptions, propsData, vm)
@@ -104,10 +113,13 @@ function initProps (vm: Component, propsOptions: Object) {
     // static props are already proxied on the component's prototype
     // during Vue.extend(). We only need to proxy props defined at
     // instantiation here.
+    // 最后判断 key是否再实例 vm中，如果不存在调用 proxy，在 vm上设置一个以key为属性的代理
+    // 这样this.[key] 就可以访问 this._props.[key]了
     if (!(key in vm)) {
       proxy(vm, `_props`, key)
     }
   }
+  // 重置 可响应式 
   toggleObserving(true)
 }
 

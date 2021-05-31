@@ -149,6 +149,15 @@ export function createPatchFunction (backend) {
       // potential patch errors down the road when it's used as an insertion
       // reference node. Instead, we clone the node on-demand before creating
       // associated DOM element for it.
+      //此vnode已在以前的渲染中使用！
+
+      //现在它被用作一个新节点，覆盖它的elm会导致
+
+      //作为插入时可能出现的修补程序错误
+
+      //引用节点。相反，我们在创建之前按需克隆节点
+
+      //关联的DOM元素。
       vnode = ownerArray[index] = cloneVNode(vnode)
     }
 
@@ -160,6 +169,7 @@ export function createPatchFunction (backend) {
     const data = vnode.data
     const children = vnode.children
     const tag = vnode.tag
+    // tag 存在
     if (isDef(tag)) {
       if (process.env.NODE_ENV !== 'production') {
         if (data && data.pre) {
@@ -362,7 +372,7 @@ export function createPatchFunction (backend) {
     const data = vnode.data
     // data 存在的话
     if (isDef(data)) {
-      // todo?????
+      // todo?????  如果 vnode.data.hook.destroy 存在 ，执行 destroy方法
       if (isDef(i = data.hook) && isDef(i = i.destroy)) i(vnode)
       // 把 所有modules里面 的destroy 方法 都 调用 一遍
       for (i = 0; i < cbs.destroy.length; ++i) cbs.destroy[i](vnode)
@@ -610,12 +620,14 @@ export function createPatchFunction (backend) {
   const isRenderedModule = makeMap('attrs,class,staticClass,staticStyle,key')
 
   // Note: this is a browser-only function so we can assume elms are DOM nodes.
+  // 这是一个只支持浏览器的函数，因此我们可以假设elm是DOM节点。
   function hydrate (elm, vnode, insertedVnodeQueue, inVPre) {
     let i
     const { tag, data, children } = vnode
     inVPre = inVPre || (data && data.pre)
     vnode.elm = elm
 
+    // 注释 并 异步工厂  返回 true
     if (isTrue(vnode.isComment) && isDef(vnode.asyncFactory)) {
       vnode.isAsyncPlaceholder = true
       return true
@@ -733,24 +745,41 @@ export function createPatchFunction (backend) {
       isInitialPatch = true
       createElm(vnode, insertedVnodeQueue)
     } else {
+      // oldVnode是不是 真实 元素
       const isRealElement = isDef(oldVnode.nodeType)
+      // oldVnode 不是真实元素 ，并且 oldVnode 和 vnode 是同一个虚拟节点
       if (!isRealElement && sameVnode(oldVnode, vnode)) {
         // patch existing root node
+        // 比较 diff 两个节点
         patchVnode(oldVnode, vnode, insertedVnodeQueue, null, null, removeOnly)
       } else {
+        // 真实元素  oldVnode
         if (isRealElement) {
           // mounting to a real element
           // check if this is server-rendered content and if we can perform
           // a successful hydration.
+          // 装载到一个真实的元素，检查这是否是服务器呈现的内容，以及我们是否可以成功地执行一个操作。
+          // SSR_ATTR = 'data-server-rendered'
           if (oldVnode.nodeType === 1 && oldVnode.hasAttribute(SSR_ATTR)) {
+            // 移除 SSR_ATTR 属性
             oldVnode.removeAttribute(SSR_ATTR)
             hydrating = true
           }
+          // 服务端
           if (isTrue(hydrating)) {
             if (hydrate(oldVnode, vnode, insertedVnodeQueue)) {
               invokeInsertHook(vnode, insertedVnodeQueue, true)
               return oldVnode
             } else if (process.env.NODE_ENV !== 'production') {
+              //               '客户端呈现的虚拟DOM树不匹配'+
+
+              // '服务器呈现的内容。这可能是由不正确的'+
+
+              // 'HTML标记，例如内部嵌套块级元素'+
+
+              // “<p>，或缺少<tbody>。提水与表演+
+
+              // '完全客户端呈现。'
               warn(
                 'The client-side rendered virtual DOM tree is not matching ' +
                 'server-rendered content. This is likely caused by incorrect ' +
@@ -762,10 +791,12 @@ export function createPatchFunction (backend) {
           }
           // either not server-rendered, or hydration failed.
           // create an empty node and replace it
+          // 创建一个 空的节点虚拟节点 代替 真实 节点
           oldVnode = emptyNodeAt(oldVnode)
         }
 
         // replacing existing element
+        // 获取 oldVnode 对应 的真实元素 和它 的父元素
         const oldElm = oldVnode.elm
         const parentElm = nodeOps.parentNode(oldElm)
 
