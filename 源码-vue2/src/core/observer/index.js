@@ -129,6 +129,7 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
   ) {
     ob = new Observer(value)
   }
+  // 如果 asRootdata 为 true  当前 ob.vmCount++
   if (asRootData && ob) {
     ob.vmCount++
   }

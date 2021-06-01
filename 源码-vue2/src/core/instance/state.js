@@ -29,6 +29,7 @@ import {
   invokeWithErrorHandling
 } from '../util/index'
 
+// 默认属性描述符
 const sharedPropertyDefinition = {
   enumerable: true,
   configurable: true,
@@ -127,11 +128,14 @@ function initProps (vm: Component, propsOptions: Object) {
   toggleObserving(true)
 }
 
+// 初始化 data
 function initData (vm: Component) {
   let data = vm.$options.data
+  // data 是 函数 ，执行并转换为响应式 ， 否则 就是 自己 
   data = vm._data = typeof data === 'function'
-    ? getData(data, vm)
+    ? getData(data, vm) // getData 把 data 里面 的值 转换为响应式 ，并返回 对象类型
     : data || {}
+    // data 如果不是 对象 设置默认值为 空对象
   if (!isPlainObject(data)) {
     data = {}
     process.env.NODE_ENV !== 'production' && warn(
@@ -148,6 +152,7 @@ function initData (vm: Component) {
   while (i--) {
     const key = keys[i]
     if (process.env.NODE_ENV !== 'production') {
+      // 方法 中已经 存在 该 key 警告 （在生产环境下 是可以 重复命名的）
       if (methods && hasOwn(methods, key)) {
         warn(
           `Method "${key}" has already been defined as a data property.`,
@@ -155,6 +160,7 @@ function initData (vm: Component) {
         )
       }
     }
+    // props 中 已经存在 会警告
     if (props && hasOwn(props, key)) {
       process.env.NODE_ENV !== 'production' && warn(
         `The data property "${key}" is already declared as a prop. ` +
@@ -162,13 +168,17 @@ function initData (vm: Component) {
         vm
       )
     } else if (!isReserved(key)) {
+      //  不是以  $ or _ 开头的话， 把 _data上的key 代理 到vm上。 (不能以 $ _开头设置 key)
+      // 直接 访问 vm[key] 就可以访问 vm._data[key]
       proxy(vm, `_data`, key)
     }
   }
   // observe data
+  // 观察data， 转换为响应式
   observe(data, true /* asRootData */)
 }
 
+// 把 data中的值 与 当前 vm实例 关联 转换为响应式
 export function getData (data: Function, vm: Component): any {
   // #7573 disable dep collection when invoking data getters
   pushTarget()
@@ -182,16 +192,21 @@ export function getData (data: Function, vm: Component): any {
   }
 }
 
+// 设置 watcher 时的 lazy 为true , 实例化时 告诉 watcher 生成一个 供计算属性使用的watcher 实例
 const computedWatcherOptions = { lazy: true }
 
 function initComputed (vm: Component, computed: Object) {
   // $flow-disable-line
+  // 保存计算属性的watcher 实例
   const watchers = vm._computedWatchers = Object.create(null)
   // computed properties are just getters during SSR
+  // 计算属性 在SSR 环境，只是一个 普通的 getter 方法
   const isSSR = isServerRendering()
 
+  //  遍历 computed 对象
   for (const key in computed) {
     const userDef = computed[key]
+    // 获取 getter , 函数直接本身，对象获取对象上的get函数
     const getter = typeof userDef === 'function' ? userDef : userDef.get
     if (process.env.NODE_ENV !== 'production' && getter == null) {
       warn(
@@ -200,6 +215,7 @@ function initComputed (vm: Component, computed: Object) {
       )
     }
 
+    //  服务端环境 没必要
     if (!isSSR) {
       // create internal watcher for the computed property.
       // 比如： fullName : function(){return this.firstname + this.lastname}
@@ -238,16 +254,21 @@ function initComputed (vm: Component, computed: Object) {
   }
 }
 
+// 属性的 getter 和 setter 根据 userDef 设置
 export function defineComputed (
   target: any,
   key: string,
   userDef: Object | Function
 ) {
+  // 非服务端环境下 计算属性才缓存
   const shouldCache = !isServerRendering()
+  // userDef 可能是 函数  也可能是 对象 {get: fn, set: fn}
+  // 如果是函数 ，将函数作为 getter函数
+  // 如果是对象， 将get方法作为getter方法，set方法作为setter方法
   if (typeof userDef === 'function') {
     sharedPropertyDefinition.get = shouldCache
       ? createComputedGetter(key)
-      : createGetterInvoker(userDef)
+      : createGetterInvoker(userDef) // 不需要缓存 ，仅仅执行 函数即可
     sharedPropertyDefinition.set = noop
   } else {
     sharedPropertyDefinition.get = userDef.get
@@ -269,6 +290,7 @@ export function defineComputed (
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
+// 缓存 key
 function createComputedGetter (key) {
   // 返回的getter 在 initComputed的时候不会执行 （lazy 为 true  constructor时 不会执行 this.get）
   // 等到 lifecycle 中 beforeMount 生命周期 之后  
@@ -281,9 +303,12 @@ function createComputedGetter (key) {
   return function computedGetter () {
     const watcher = this._computedWatchers && this._computedWatchers[key]
     if (watcher) {
+      // dirty 设置 为 true之后 ，下一次读取 计算属性才会 重新计算
       if (watcher.dirty) {
         watcher.evaluate()
       }
+      // 把 当前 读取计算属性的watcher 添加到 计算属性所有的依赖列表中
+      // 这样 依赖列表 有变化 ，都会 通知 当前 这个watcher 更新（比如更新视图）
       if (Dep.target) {
         watcher.depend()
       }
@@ -298,10 +323,13 @@ function createGetterInvoker(fn) {
   }
 }
 
+// 初始化方法
 function initMethods (vm: Component, methods: Object) {
   const props = vm.$options.props
+  // 遍历vm.$options中的methods
   for (const key in methods) {
     if (process.env.NODE_ENV !== 'production') {
+      // method不是 函数 警告
       if (typeof methods[key] !== 'function') {
         warn(
           `Method "${key}" has type "${typeof methods[key]}" in the component definition. ` +
@@ -309,12 +337,14 @@ function initMethods (vm: Component, methods: Object) {
           vm
         )
       }
+      // 如果 props 中已经 有 这个 key 警告
       if (props && hasOwn(props, key)) {
         warn(
           `Method "${key}" has already been defined as a prop.`,
           vm
         )
       }
+      // 如果 vm[key] 实例上已经什么过 警告
       if ((key in vm) && isReserved(key)) {
         warn(
           `Method "${key}" conflicts with an existing Vue instance method. ` +
@@ -322,6 +352,7 @@ function initMethods (vm: Component, methods: Object) {
         )
       }
     }
+    // 把method方法 挂载 到 vm实例上 
     vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm)
   }
 }
