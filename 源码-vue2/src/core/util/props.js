@@ -107,53 +107,65 @@ function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): a
 /**
  * Assert whether a prop is valid.
  */
-function assertProp (
-  prop: PropOptions,
-  name: string,
-  value: any,
-  vm: ?Component,
-  absent: boolean
+ function assertProp(
+  prop: PropOptions, // props选项
+  name: string, // props中prop选项的key
+  value: any, // prop数据 (propData)
+  vm: ? Component, // 上下文
+  absent : boolean // prop数据中不存在 key属性
 ) {
+  // 如果 设置了必填项 并且 没有 key 属性 ，控制台 警告 
   if (prop.required && absent) {
-    warn(
-      'Missing required prop: "' + name + '"',
-      vm
-    )
-    return
+      warn(
+          'Missing required prop: "' + name + '"',
+          vm
+      )
+      return
   }
+  //  如果value 不存在 并且 没有设置 required  是合法的情况，直接返回 undefined即可
+  //  null == undefined 为 true
   if (value == null && !prop.required) {
-    return
+      return
   }
   let type = prop.type
+      // valid 默认 为 false , 或者 设置type 为 true时默认为true
   let valid = !type || type === true
+      // 保存 type的列表 ，当校验失败，在控制台打印警告时， 可以将变量 expectedTypes中保存的类型打印出来
   const expectedTypes = []
   if (type) {
-    if (!Array.isArray(type)) {
-      type = [type]
-    }
-    for (let i = 0; i < type.length && !valid; i++) {
-      const assertedType = assertType(value, type[i], vm)
-      expectedTypes.push(assertedType.expectedType || '')
-      valid = assertedType.valid
-    }
+      // 把type 转换 数组
+      if (!Array.isArray(type)) {
+          type = [type]
+      }
+      // 
+      for (let i = 0; i < type.length && !valid; i++) {
+          // assertType 检验value 。返回一个对象{valid: true, expectedType: "Boolean"}
+          // valid表示 是否校验成功  expectedType 表示类型
+          const assertedType = assertType(value, type[i], vm)
+          expectedTypes.push(assertedType.expectedType || '')
+          valid = assertedType.valid
+      }
   }
 
+  // 循环结束后， haveExpectedTypes 不存在，那么校验失败 警告
   const haveExpectedTypes = expectedTypes.some(t => t)
   if (!valid && haveExpectedTypes) {
-    warn(
-      getInvalidTypeMessage(name, value, expectedTypes),
-      vm
-    )
-    return
+      warn(
+          getInvalidTypeMessage(name, value, expectedTypes),
+          vm
+      )
+      return
   }
+  // 获取 自定义验证函数 
+  // 如果设置了 就执行。猴子 调用warn 打印警告
   const validator = prop.validator
   if (validator) {
-    if (!validator(value)) {
-      warn(
-        'Invalid prop: custom validator check failed for prop "' + name + '".',
-        vm
-      )
-    }
+      if (!validator(value)) {
+          warn(
+              'Invalid prop: custom validator check failed for prop "' + name + '".',
+              vm
+          )
+      }
   }
 }
 

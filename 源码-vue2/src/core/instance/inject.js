@@ -32,6 +32,8 @@ export function initInjections (vm: Component) {
           )
         })
       } else {
+        // toggleObserving(false) 的作用的  在访问 vm[key] 的时候 可以获取到 result[key]
+        // 但是 由于不是响应式 那么 修改 vm[key] 不能修改 result[key] ，只能通过 provide 提供的实例中修改
         defineReactive(vm, key, result[key])
       }
     })
@@ -53,7 +55,7 @@ export function resolveInject (inject: any, vm: Component): ?Object {
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i]
       // #6574 in case the inject object is observed...
-      // inject 已经在 vue的实例上 跳过
+      // key 就是 __ob__ 就是当前实例 new Observer 跳过
       if (key === '__ob__') continue
       // 从 from 属性 获取 对应的 provide源属性key  。 injdect里面的属性都会处理为injdect:{ key: {from: 'test'}}
       const provideKey = inject[key].from

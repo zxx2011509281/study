@@ -108,6 +108,10 @@ function initProps (vm: Component, propsOptions: Object) {
         }
       })
     } else {
+      // toggleObserving(false) 是为了 能通过 props访问 props[key] 对应的value值
+      // 但是 不转换为 响应式 （访问和修改 都会 引起 watcher 更新
+      // 在 validateProp 中 value 已经是响应式的了。通过父组件修改 值，响应变化
+      // 而不能 在当前组件通过 访问 props[key] 修改 value值
       defineReactive(props, key, value)
     }
     // static props are already proxied on the component's prototype
