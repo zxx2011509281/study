@@ -125,7 +125,7 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
     !isServerRendering() && // 不是 ssr 
     (Array.isArray(value) || isPlainObject(value)) && //数组或对象
     Object.isExtensible(value) &&  //判断一个对象是否是可扩展的
-    !value._isVue // 没有 _isVue属性
+    !value._isVue // 没有 _isVue属性 避免被观察的标志
   ) {
     ob = new Observer(value)
   }
@@ -221,6 +221,7 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
     return val
   }
   const ob = (target: any).__ob__
+  //  避免被观察的标志 || 是 根实例的data数据
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== 'production' && warn(
       'Avoid adding reactive properties to a Vue instance or its root $data ' +
@@ -251,6 +252,7 @@ export function del (target: Array<any> | Object, key: any) {
     return
   }
   const ob = (target: any).__ob__
+  //  避免被观察的标志 || 是 根实例的data数据
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== 'production' && warn(
       'Avoid deleting properties on a Vue instance or its root $data ' +
