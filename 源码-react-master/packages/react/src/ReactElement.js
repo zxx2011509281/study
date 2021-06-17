@@ -147,10 +147,14 @@ function warnIfStringRefCannotBeAutoConverted(config) {
 const ReactElement = function(type, key, ref, self, source, owner, props) {
   const element = {
     // This tag allows us to uniquely identify this as a React Element
+    // 标识 element是什么类型().（跟平台有关。其他平台就不是REACT_ELEMENT_TYPE）
+    // 当 React 在渲染的时候加上对 $$typeof 合法性的验证即可防止恶意代码的插入。低版本不支持 Symbol 的浏览器是没有这个安全特性的
+    // REACT_ELEMENT_TYPE:  Symbol.for('react.element') || 0xeac7
     $$typeof: REACT_ELEMENT_TYPE,
 
     // Built-in properties that belong on the element
-    type: type,
+    // 传入的
+    type: type, // 节点类型: 原生组件，classCom, functionCom, fragement....
     key: key,
     ref: ref,
     props: props,
@@ -221,6 +225,7 @@ export function jsx(type, config, maybeKey) {
   // but as an intermediary step, we will use jsxDEV for everything except
   // <div {...props} key="Hi" />, because we aren't currently able to tell if
   // key is explicitly declared to be undefined or not.
+  // 
   if (maybeKey !== undefined) {
     key = '' + maybeKey;
   }
@@ -239,6 +244,7 @@ export function jsx(type, config, maybeKey) {
       hasOwnProperty.call(config, propName) &&
       !RESERVED_PROPS.hasOwnProperty(propName)
     ) {
+      //key,ref, __self,  __source  除开这4个属性 其他都 添加到 props上
       props[propName] = config[propName];
     }
   }
@@ -357,7 +363,9 @@ export function createElement(type, config, children) {
   let self = null;
   let source = null;
 
+  // 第二个参数 不为 null
   if (config != null) {
+    // 提取 ref
     if (hasValidRef(config)) {
       ref = config.ref;
 
@@ -365,13 +373,16 @@ export function createElement(type, config, children) {
         warnIfStringRefCannotBeAutoConverted(config);
       }
     }
+    // 提取 key
     if (hasValidKey(config)) {
       key = '' + config.key;
     }
 
+    // 如果有 __self  __source 单独提取出来
     self = config.__self === undefined ? null : config.__self;
     source = config.__source === undefined ? null : config.__source;
     // Remaining properties are added to a new props object
+    // key,ref, __self,  __source  除开这4个属性 其他都 添加到 props上
     for (propName in config) {
       if (
         hasOwnProperty.call(config, propName) &&
@@ -384,10 +395,14 @@ export function createElement(type, config, children) {
 
   // Children can be more than one argument, and those are transferred onto
   // the newly allocated props object.
+  // children 可能有多个，并不仅仅是第三个参数。,也有可能第四个也是
+  // 获取所有的 children 
   const childrenLength = arguments.length - 2;
   if (childrenLength === 1) {
+    // 只有一个，那么直接赋值 
     props.children = children;
   } else if (childrenLength > 1) {
+    // 多个，遍历添加
     const childArray = Array(childrenLength);
     for (let i = 0; i < childrenLength; i++) {
       childArray[i] = arguments[i + 2];
@@ -401,6 +416,7 @@ export function createElement(type, config, children) {
   }
 
   // Resolve default props
+  // 如果有设置 defaultProps默认值 ，而且 上面cofig中没有对应的propName.那么赋值
   if (type && type.defaultProps) {
     const defaultProps = type.defaultProps;
     for (propName in defaultProps) {
@@ -423,6 +439,7 @@ export function createElement(type, config, children) {
       }
     }
   }
+  // 返回 ReactElement 处理 的数据
   return ReactElement(
     type,
     key,

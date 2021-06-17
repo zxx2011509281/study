@@ -27,6 +27,7 @@ function Component(props, context, updater) {
   this.updater = updater || ReactNoopUpdateQueue;
 }
 
+// isReactComponent 标识为 component
 Component.prototype.isReactComponent = {};
 
 /**
@@ -62,6 +63,7 @@ Component.prototype.setState = function(partialState, callback) {
     'setState(...): takes an object of state variables to update or a ' +
       'function which returns an object of state variables.',
   );
+  // updater方法 中的 enqueueSetState 实现setStatee
   this.updater.enqueueSetState(this, partialState, callback, 'setState');
 };
 
@@ -137,7 +139,9 @@ function PureComponent(props, context, updater) {
 const pureComponentPrototype = (PureComponent.prototype = new ComponentDummy());
 pureComponentPrototype.constructor = PureComponent;
 // Avoid an extra prototype jump for these methods.
+// 继承 Component
 Object.assign(pureComponentPrototype, Component.prototype);
+// // isPureReactComponent 标识为 PureComponent
 pureComponentPrototype.isPureReactComponent = true;
 
 export {Component, PureComponent};
