@@ -44,15 +44,18 @@ export default class VueRouter {
     this.matcher = createMatcher(options.routes || [], this)
 
     let mode = options.mode || 'hash'
+    // 如果浏览器不支持 history.pushState mode会变为 hash
     this.fallback = mode === 'history' && !supportsPushState && options.fallback !== false
     if (this.fallback) {
       mode = 'hash'
     }
+    // 没有浏览器API 路由强制进入abstact模式 
     if (!inBrowser) {
       mode = 'abstract'
     }
     this.mode = mode
 
+    // 根据不同mode 获取不同的history
     switch (mode) {
       case 'history':
         this.history = new HTML5History(this, options.base)
@@ -70,6 +73,7 @@ export default class VueRouter {
     }
   }
 
+  // 匹配对应的location
   match (
     raw: RawLocation,
     current?: Route,
@@ -78,6 +82,7 @@ export default class VueRouter {
     return this.matcher.match(raw, current, redirectedFrom)
   }
 
+  // 获取当前路由对应的路由信息对象
   get currentRoute (): ?Route {
     return this.history && this.history.current
   }
@@ -91,7 +96,7 @@ export default class VueRouter {
       `before creating root instance.`
     )
 
-    /* 将当前vm实例保存在app中 */
+    /* 将当前vm实例保存在apps中 */
     this.apps.push(app)
 
     // main app already initialized.
@@ -124,7 +129,7 @@ export default class VueRouter {
       })
     })
   }
-
+// Router 实例方法
   beforeEach (fn: Function): Function {
     return registerHook(this.beforeHooks, fn)
   }
@@ -165,6 +170,7 @@ export default class VueRouter {
     this.go(1)
   }
 
+  // 返回目标位置或是当前路由匹配的组件数组 (是数组的定义/构造类，不是实例)。通常在服务端渲染的数据预加载时使用。
   getMatchedComponents (to?: RawLocation | Route): Array<any> {
     const route: any = to
       ? to.matched
